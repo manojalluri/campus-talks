@@ -60,7 +60,8 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://campustalks.vercel.app',
-    'https://campus-talks.vercel.app'
+    'https://campus-talks.vercel.app',
+    'https://campus-talkss.vercel.app'
 ];
 
 app.use(cors({
