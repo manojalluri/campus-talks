@@ -66,8 +66,12 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+        // Allow all vercel and render domains for easier community access
+        if (!origin ||
+            origin.includes('vercel.app') ||
+            origin.includes('onrender.com') ||
+            origin.includes('localhost') ||
+            origin.includes('127.0.0.1')) {
             return callback(null, true);
         }
         return callback(new Error('Blocked by CORS policy'));
@@ -76,6 +80,15 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
+
+// Health Check Endpoint
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'online',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        time: new Date().toISOString()
+    });
+});
 
 // GLOBAL Logger
 app.use((req, res, next) => {

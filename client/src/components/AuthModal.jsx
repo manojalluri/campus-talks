@@ -38,7 +38,12 @@ const AuthModal = ({ onClose, onSuccess }) => {
             onSuccess(res.data.user);
             onClose();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Authentication failed');
+            console.error('Auth Error:', err);
+            if (!err.response) {
+                toast.error('Network Error: Cannot connect to campus server. Check your VITE_API_URL.');
+            } else {
+                toast.error(err.response?.data?.message || 'Authentication failed');
+            }
         } finally {
             setLoading(false);
         }
