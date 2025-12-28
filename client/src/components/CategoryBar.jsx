@@ -8,7 +8,7 @@ const CategoryBar = ({ selected, onSelect }) => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const res = await axios.get('http://127.0.0.1:5000/api/categories');
+                const res = await axios.get('/api/categories');
                 setCategories([{ id: 'All', label: 'All', icon: '✨' }, ...res.data]);
             } catch (err) {
                 console.error('Failed to fetch categories');

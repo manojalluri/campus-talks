@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import CommunityGuidelinesModal from './CommunityGuidelinesModal';
+import EmojiPicker from 'emoji-picker-react';
 
 const CreatePostModal = ({ onClose, onPostCreated }) => {
     const [content, setContent] = useState('');
@@ -13,6 +14,7 @@ const CreatePostModal = ({ onClose, onPostCreated }) => {
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [showGuidelines, setShowGuidelines] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const textAreaRef = useRef(null);
 
     useEffect(() => {
@@ -20,7 +22,7 @@ const CreatePostModal = ({ onClose, onPostCreated }) => {
 
         const fetchCategories = async () => {
             try {
-                const res = await axios.get('http://127.0.0.1:5000/api/categories');
+                const res = await axios.get('/api/categories');
                 setCategories(res.data);
             } catch (err) {
                 console.error('Failed to load categories');
@@ -38,7 +40,7 @@ const CreatePostModal = ({ onClose, onPostCreated }) => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         try {
-            await axios.post('http://127.0.0.1:5000/api/posts',
+            await axios.post('/api/posts',
                 { content, category },
                 { headers }
             );
@@ -99,14 +101,57 @@ const CreatePostModal = ({ onClose, onPostCreated }) => {
                                 <label className="text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">Your Whisper</label>
                                 <span className={clsx("text-[10px] font-black font-mono tracking-widest transition-colors", getCounterColor())}>{content.length}/500</span>
                             </div>
-                            <textarea
-                                ref={textAreaRef}
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                placeholder="Spill the tea... no one will know it's you."
-                                maxLength={500}
-                                className="w-full h-44 bg-slate-900 border border-white/5 rounded-3xl p-6 text-white placeholder-text-muted/20 focus:outline-none focus:border-white/30 transition-all text-xl font-medium resize-none shadow-inner"
-                            />
+                            <div className="relative">
+                                <textarea
+                                    ref={textAreaRef}
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    placeholder="Spill the tea... no one will know it's you."
+                                    maxLength={500}
+                                    className="w-full h-44 bg-slate-900 border border-white/5 rounded-3xl p-6 pb-12 text-white placeholder-text-muted/20 focus:outline-none focus:border-white/30 transition-all text-xl font-medium resize-none shadow-inner"
+                                />
+                                <div className="absolute bottom-4 left-4">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setShowEmojiPicker(!showEmojiPicker);
+                                        }}
+                                        className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-xl transition-all"
+                                        title="Add Emoji"
+                                    >
+                                        😊
+                                    </button>
+                                </div>
+                                <AnimatePresence>
+                                    {showEmojiPicker && (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                            className="absolute bottom-16 left-4 z-50 shadow-2xl rounded-2xl overflow-hidden"
+                                        >
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setShowEmojiPicker(false)}
+                                                    className="absolute -top-2 -right-2 bg-slate-800 rounded-full p-1 text-white z-50 hover:bg-slate-700"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                                <EmojiPicker
+                                                    onEmojiClick={(emojiObject) => {
+                                                        setContent(prev => prev + emojiObject.emoji);
+                                                        // Keep picker open or close? Usually keep open for multiple
+                                                    }}
+                                                    theme="dark"
+                                                    width={300}
+                                                    height={400}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
 
                         <div className="flex items-start gap-4 bg-white/5 p-6 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">

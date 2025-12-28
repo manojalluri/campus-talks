@@ -18,7 +18,7 @@ const EditUsernameModal = ({ onClose, user, onUpdate }) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('campus_talks_token');
-            const res = await axios.put('http://127.0.0.1:5000/api/auth/update-username',
+            const res = await axios.put('/api/auth/update-username',
                 { username: newUsername },
                 { headers: { Authorization: `Bearer ${token}` } }
             );

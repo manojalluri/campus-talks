@@ -12,7 +12,7 @@ const AdminLoginModal = ({ onClose, onLoginSuccess }) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await axios.post('http://127.0.0.1:5000/api/auth/admin-login', { password: password.trim() });
+            const res = await axios.post('/api/auth/admin-login', { password: password.trim() });
             localStorage.setItem('campus_talks_admin_token', res.data.token);
             toast.success('Admin Authenticated');
             onLoginSuccess();

@@ -63,7 +63,7 @@ const AdminDashboard = ({ onClose }) => {
 
     const fetchStats = async () => {
         try {
-            const res = await axios.get('http://127.0.0.1:5000/api/admin/stats', {
+            const res = await axios.get('/api/admin/stats', {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             if (res.data) setStats(res.data);
@@ -84,7 +84,7 @@ const AdminDashboard = ({ onClose }) => {
         if (activeTab === 'categories') endpoint = '/api/admin/categories';
 
         try {
-            const res = await axios.get(`http://127.0.0.1:5000${endpoint}`, {
+            const res = await axios.get(endpoint, {
                 headers: { Authorization: `Bearer ${adminToken}` },
                 params: { search: searchQuery }
             });
@@ -114,7 +114,7 @@ const AdminDashboard = ({ onClose }) => {
 
     const handleToggleBan = async (id, currentStatus) => {
         try {
-            await axios.post(`http://127.0.0.1:5000/api/admin/users/${id}/ban`, {}, {
+            await axios.post(`/api/admin/users/${id}/ban`, {}, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('User status updated');
@@ -127,7 +127,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeletePost = async (id) => {
         if (!window.confirm('Delete this content permanently?')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/posts/${id}`, {
+            await axios.delete(`/api/admin/posts/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('Post removed');
@@ -141,7 +141,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeletePoll = async (id) => {
         if (!window.confirm('Delete this poll permanently?')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/polls/${id}`, {
+            await axios.delete(`/api/admin/polls/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('Poll removed');
@@ -155,7 +155,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeleteUser = async (id) => {
         if (!window.confirm('Erase this user record forever?')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/users/${id}`, {
+            await axios.delete(`/api/admin/users/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('User erased');
@@ -171,12 +171,12 @@ const AdminDashboard = ({ onClose }) => {
         e.preventDefault();
         try {
             if (editingCategory._id) {
-                await axios.patch(`http://127.0.0.1:5000/api/admin/categories/${editingCategory._id}`, editingCategory, {
+                await axios.patch(`/api/admin/categories/${editingCategory._id}`, editingCategory, {
                     headers: { Authorization: `Bearer ${adminToken}` }
                 });
                 toast.success('Category updated');
             } else {
-                await axios.post(`http://127.0.0.1:5000/api/admin/categories`, editingCategory, {
+                await axios.post(`/api/admin/categories`, editingCategory, {
                     headers: { Authorization: `Bearer ${adminToken}` }
                 });
                 toast.success('Category created');
@@ -191,7 +191,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeleteCategory = async (id) => {
         if (!window.confirm('Delete this category? Posts in this category will remain but the filter might break.')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/categories/${id}`, {
+            await axios.delete(`/api/admin/categories/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('Category removed');
@@ -436,7 +436,7 @@ const AdminDashboard = ({ onClose }) => {
                                                 onClick={async () => {
                                                     setUpdatingPass(true);
                                                     try {
-                                                        await axios.post('http://127.0.0.1:5000/api/admin/update-password', {
+                                                        await axios.post('/api/admin/update-password', {
                                                             currentPassword: passwordUpdate.current,
                                                             newPassword: passwordUpdate.next
                                                         }, { headers: { Authorization: `Bearer ${adminToken}` } });

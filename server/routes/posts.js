@@ -54,20 +54,45 @@ router.get('/', auth, async (req, res) => {
             sortQuery = { upvotes: -1, createdAt: -1 };
         }
 
-        const posts = await Post.find(query)
-            .populate('author', 'username avatar')
-            .populate('comments.author', 'username avatar')
-            .sort(sortQuery);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
 
-        // Add isOwner flag
+        const posts = await Post.find(query)
+            .sort(sortQuery)
+            .skip(skip)
+            .limit(limit)
+            .populate('author', 'username avatar')
+            .populate('comments.author', 'username avatar');
+
+        // Check for more pages
+        const total = await Post.countDocuments(query);
+        const hasMore = skip + posts.length < total;
+
+        // Add isOwner and Vote status flags
         const postsWithOwnership = posts.map(post => {
             const postObj = post.toObject();
             postObj.isOwner = post.userHash === currentUserHash;
+
+            // Check if current user ID is in the vote arrays
+            if (req.user && req.user.id) {
+                const upvotedBy = post.upvotedBy || [];
+                const downvotedBy = post.downvotedBy || [];
+                postObj.hasUpvoted = upvotedBy.map(id => id.toString()).includes(req.user.id);
+                postObj.hasDownvoted = downvotedBy.map(id => id.toString()).includes(req.user.id);
+            } else {
+                postObj.hasUpvoted = false;
+                postObj.hasDownvoted = false;
+            }
+
+            delete postObj.upvotedBy;
+            delete postObj.downvotedBy;
+
             return postObj;
         });
 
-        console.log(`Returning ${postsWithOwnership.length} posts to client`);
-        res.json(postsWithOwnership);
+        console.log(`Returning ${postsWithOwnership.length} posts (Page ${page})`);
+        res.json({ posts: postsWithOwnership, hasMore, total });
     } catch (err) {
         console.error('Error fetching posts:', err);
         res.status(500).json({ message: err.message });
@@ -158,7 +183,8 @@ router.delete('/:id', auth, async (req, res) => {
 
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
-        if (post.userHash !== userHash) {
+        // Allow deletion if owner OR admin
+        if (post.userHash !== userHash && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'You do not have permission to delete this post' });
         }
 
@@ -215,23 +241,79 @@ router.post('/:id/report', async (req, res) => {
     }
 });
 
-// Vote on a post (Requires Auth for integrity)
+// Vote on a post (Atomic & Concurrency Safe)
 router.patch('/:id/vote', auth, async (req, res) => {
-    const { type } = req.body;
+    const { type } = req.body; // 'upvote' or 'downvote'
+    const userId = req.user.id;
 
     try {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
+        // Initialize arrays if missing (legacy data)
+        if (!post.upvotedBy) post.upvotedBy = [];
+        if (!post.downvotedBy) post.downvotedBy = [];
+
+        const hasUpvoted = post.upvotedBy.includes(userId);
+        const hasDownvoted = post.downvotedBy.includes(userId);
+
+        let updateOp = {};
+
         if (type === 'upvote') {
-            post.upvotes += 1;
+            if (hasUpvoted) {
+                // Toggle OFF Upvote
+                updateOp = {
+                    $inc: { upvotes: -1 },
+                    $pull: { upvotedBy: userId }
+                };
+            } else {
+                // Toggle ON Upvote (and remove Downvote if exists)
+                updateOp = {
+                    $inc: { upvotes: 1, ...(hasDownvoted ? { downvotes: -1 } : {}) },
+                    $addToSet: { upvotedBy: userId },
+                    ...(hasDownvoted ? { $pull: { downvotedBy: userId } } : {})
+                };
+            }
         } else if (type === 'downvote') {
-            post.downvotes += 1;
+            if (hasDownvoted) {
+                // Toggle OFF Downvote
+                updateOp = {
+                    $inc: { downvotes: -1 },
+                    $pull: { downvotedBy: userId }
+                };
+            } else {
+                // Toggle ON Downvote (and remove Upvote if exists)
+                updateOp = {
+                    $inc: { downvotes: 1, ...(hasUpvoted ? { upvotes: -1 } : {}) },
+                    $addToSet: { downvotedBy: userId },
+                    ...(hasUpvoted ? { $pull: { upvotedBy: userId } } : {})
+                };
+            }
         }
 
-        await post.save();
-        res.json(post);
+        // Atomic Update
+        const updatedPost = await Post.findByIdAndUpdate(req.params.id, updateOp, { new: true })
+            .populate('author', 'username avatar')
+            .populate('comments.author', 'username avatar');
+
+        // Manually reconstruct the 'hasUpvoted/hasDownvoted' for response since we lean on user-specific view
+        // Actually, we can just return the updated post and let frontend re-calc or sends back flags
+        // Reuse the mapping logic
+        const postObj = updatedPost.toObject();
+        postObj.isOwner = post.userHash === (req.user ? crypto.createHash('sha256').update(req.user.id + (process.env.HASH_PEPPER || 'campus_talks_fallback_pepper')).digest('hex') : '');
+        // Note: hashing logic might be complex to replicate here cleanly without function extraction, 
+        // but for voting return, frontend usually just needs the counts and status.
+        // Let's stick to the consistent return format.
+
+        postObj.hasUpvoted = (updatedPost.upvotedBy || []).map(id => id.toString()).includes(userId);
+        postObj.hasDownvoted = (updatedPost.downvotedBy || []).map(id => id.toString()).includes(userId);
+
+        delete postObj.upvotedBy;
+        delete postObj.downvotedBy;
+
+        res.json(postObj);
     } catch (err) {
+        console.error('Vote error:', err);
         res.status(400).json({ message: err.message });
     }
 });

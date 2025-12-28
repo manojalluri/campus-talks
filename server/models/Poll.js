@@ -14,5 +14,7 @@ const pollSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+pollSchema.index({ expiresAt: 1 });
+
 const Poll = mongoose.model('Poll', pollSchema);
 export default Poll;

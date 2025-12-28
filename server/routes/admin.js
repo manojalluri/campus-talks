@@ -172,8 +172,10 @@ router.get('/polls', isAdmin, async (req, res) => {
 // Delete User Permanently
 router.delete('/users/:id', isAdmin, async (req, res) => {
     try {
+        // Cascade delete all posts by this user
+        await Post.deleteMany({ author: req.params.id });
         await User.findByIdAndDelete(req.params.id);
-        res.json({ message: 'User record erased' });
+        res.json({ message: 'User and their whispers erased' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

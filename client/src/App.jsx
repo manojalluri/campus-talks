@@ -46,8 +46,11 @@ function App() {
     }
   }, []);
 
-  // Axios Global Interceptor for Auth
+  // Axios Global Configuration
   useEffect(() => {
+    // Set base URL for all requests
+    axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -61,39 +64,58 @@ function App() {
     return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
-  const fetchPosts = async (overrideCategory) => {
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  // ... (existing code)
+
+  const fetchPosts = async (reset = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+        setPage(1);
+      } else {
+        setIsFetchingMore(true);
+      }
+
       const token = localStorage.getItem('campus_talks_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const activeCategory = overrideCategory || category;
+      const activeCategory = category;
+      const currentPage = reset ? 1 : page;
 
-      const res = await axios.get('http://127.0.0.1:5000/api/posts', {
+      const res = await axios.get('/api/posts', {
         headers,
         params: {
           category: activeCategory !== 'All' ? activeCategory : undefined,
           sort: sort,
+          page: currentPage,
+          limit: 10, // Load 10 at a time
           _t: Date.now() // Cache buster
         }
       });
-      setPosts(res.data);
+
+      const newPosts = res.data.posts || [];
+      setHasMore(res.data.hasMore);
+
+      if (reset) {
+        setPosts(newPosts);
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+      }
+
+      if (!reset) setPage(prev => prev + 1);
+      else setPage(2); // Next page will be 2
+
     } catch (err) {
       console.error(err);
-      // Only show error for actual network failures
       if (err.message === 'Network Error' || !err.response) {
         toast.error('Failed to sync with campus');
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePostCreated = (newPostCategory) => {
-    if (category !== 'All' && category !== newPostCategory) {
-      setCategory('All');
-    } else {
-      fetchPosts();
+      setIsFetchingMore(false);
     }
   };
 
@@ -103,7 +125,7 @@ function App() {
       const token = localStorage.getItem('campus_talks_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const res = await axios.get('http://127.0.0.1:5000/api/polls', { headers });
+      const res = await axios.get('/api/polls', { headers });
       setPolls(res.data);
     } catch (err) {
       console.error(err);
@@ -112,19 +134,67 @@ function App() {
     }
   };
 
+  const handlePostCreated = (newPostCategory) => {
+    if (category !== 'All' && category !== newPostCategory) {
+      setCategory('All');
+    }
+    fetchPosts(true);
+  };
+
+  // Effect to reset and fetch when filters change
   useEffect(() => {
-    if (view === 'whispers') fetchPosts();
+    if (view === 'whispers') fetchPosts(true);
     else fetchPolls();
   }, [category, sort, view]);
 
   const handleVote = async (postId, type) => {
     const prevPosts = [...posts];
+
+    // Optimistic Update
     setPosts(prevPosts.map(post => {
       if (post._id === postId) {
+        const { hasUpvoted, hasDownvoted } = post;
+        let newUpvotes = post.upvotes;
+        let newDownvotes = post.downvotes;
+        let newHasUpvoted = hasUpvoted;
+        let newHasDownvoted = hasDownvoted;
+
+        if (type === 'upvote') {
+          if (hasUpvoted) {
+            // Toggle Off
+            newUpvotes = Math.max(0, newUpvotes - 1);
+            newHasUpvoted = false;
+          } else {
+            // Toggle On
+            newUpvotes += 1;
+            newHasUpvoted = true;
+            if (hasDownvoted) {
+              newDownvotes = Math.max(0, newDownvotes - 1);
+              newHasDownvoted = false;
+            }
+          }
+        } else if (type === 'downvote') {
+          if (hasDownvoted) {
+            // Toggle Off
+            newDownvotes = Math.max(0, newDownvotes - 1);
+            newHasDownvoted = false;
+          } else {
+            // Toggle On
+            newDownvotes += 1;
+            newHasDownvoted = true;
+            if (hasUpvoted) {
+              newUpvotes = Math.max(0, newUpvotes - 1);
+              newHasUpvoted = false;
+            }
+          }
+        }
+
         return {
           ...post,
-          upvotes: type === 'upvote' ? (post.upvotes || 0) + 1 : post.upvotes,
-          downvotes: type === 'downvote' ? (post.downvotes || 0) + 1 : post.downvotes
+          upvotes: newUpvotes,
+          downvotes: newDownvotes,
+          hasUpvoted: newHasUpvoted,
+          hasDownvoted: newHasDownvoted
         };
       }
       return post;
@@ -132,8 +202,15 @@ function App() {
 
     try {
       const token = localStorage.getItem('campus_talks_token');
-      await axios.patch(`http://127.0.0.1:5000/api/posts/${postId}/vote`, { type }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      // If not logged in, error/redirect? Usually should check before
+      if (!token) {
+        setIsAuthModalOpen(true);
+        setPosts(prevPosts); // Revert
+        return;
+      }
+
+      await axios.patch(`/api/posts/${postId}/vote`, { type }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {
       toast.error('Could not update vote');
@@ -269,7 +346,24 @@ function App() {
               <motion.div key={view + category + sort} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="grid gap-6" >
                 {view === 'whispers' ? (
                   posts.length === 0 ? <EmptyState onAction={() => setIsModalOpen(true)} /> :
-                    posts.map(post => <PostCard key={post._id} post={post} onVote={handleVote} onReport={fetchPosts} onUpdated={fetchPosts} />)
+                    <>
+                      {posts.map(post => <PostCard key={post._id} post={post} onVote={handleVote} onReport={() => fetchPosts(true)} onUpdated={() => fetchPosts(true)} />)}
+                      {hasMore && (
+                        <div className="flex justify-center pt-6 pb-2">
+                          <button
+                            onClick={() => fetchPosts(false)}
+                            disabled={isFetchingMore}
+                            className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-all disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isFetchingMore ? (
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <>Load More Whispers <ArrowRight size={16} /></>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </>
                 ) : (
                   polls.length === 0 ? <EmptyState onAction={() => setIsPollModalOpen(true)} label="No active polls found." buttonLabel="Launch first poll" /> :
                     polls.map(poll => <PollCard key={poll._id} poll={poll} onVoteUpdate={(updated) => setPolls(polls.map(p => p._id === updated._id ? updated : p))} />)
@@ -304,9 +398,35 @@ function App() {
         {isAdminDashboardOpen && <AdminDashboard onClose={() => setIsAdminDashboardOpen(false)} />}
         {showLegal && <LegalModal onAccept={() => { localStorage.setItem('campus_talks_legal_accepted', 'true'); setShowLegal(false); }} />}
       </AnimatePresence>
+
+      <ScrollToTop />
     </div>
   );
 }
+
+const ScrollToTop = () => {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const toggle = () => setVisible(window.scrollY > 500);
+    window.addEventListener('scroll', toggle);
+    return () => window.removeEventListener('scroll', toggle);
+  }, []);
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 z-[100] p-4 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl text-white shadow-2xl hover:bg-white/20 transition-all active:scale-95"
+        >
+          <ArrowRight size={24} className="-rotate-90" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+};
 
 const FeatureCard = ({ icon, title, desc }) => (
   <div className="p-8 bg-white/[0.03] border border-white/[0.05] rounded-[2.5rem] text-left hover:bg-white/[0.06] transition-all group">

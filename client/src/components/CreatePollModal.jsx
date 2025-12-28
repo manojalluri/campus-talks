@@ -36,7 +36,7 @@ const CreatePollModal = ({ onClose, onPollCreated }) => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         try {
-            await axios.post('http://127.0.0.1:5000/api/polls', {
+            await axios.post('/api/polls', {
                 question,
                 options,
                 duration: 24

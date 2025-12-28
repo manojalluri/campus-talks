@@ -58,7 +58,7 @@ const PostCard = ({ post, onVote, onReport, onUpdated }) => {
 
     const handleReport = async () => {
         try {
-            const res = await axios.post(`http://127.0.0.1:5000/api/posts/${_id}/report`);
+            const res = await axios.post(`/api/posts/${_id}/report`);
             toast.success('Reported');
             if (res.data.status === 'hidden' && onReport) onReport();
             setShowOptions(false);
@@ -72,7 +72,7 @@ const PostCard = ({ post, onVote, onReport, onUpdated }) => {
 
         try {
             const token = localStorage.getItem('campus_talks_token');
-            await axios.delete(`http://127.0.0.1:5000/api/posts/${_id}`, {
+            await axios.delete(`/api/posts/${_id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success('Whisper deleted');
@@ -90,7 +90,7 @@ const PostCard = ({ post, onVote, onReport, onUpdated }) => {
 
         try {
             const token = localStorage.getItem('campus_talks_token');
-            await axios.put(`http://127.0.0.1:5000/api/posts/${_id}`,
+            await axios.put(`/api/posts/${_id}`,
                 { content: editContent },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -109,7 +109,7 @@ const PostCard = ({ post, onVote, onReport, onUpdated }) => {
         const token = localStorage.getItem('campus_talks_token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         try {
-            const res = await axios.post(`http://127.0.0.1:5000/api/posts/${_id}/comments`,
+            const res = await axios.post(`/api/posts/${_id}/comments`,
                 { content: commentText },
                 { headers }
             );
@@ -192,9 +192,9 @@ const PostCard = ({ post, onVote, onReport, onUpdated }) => {
                 <div className="flex items-center justify-between pt-6 border-t border-white/5">
                     <div className="flex items-center gap-2 sm:gap-6">
                         <div className="flex items-center bg-slate-900/80 rounded-2xl p-1 border border-white/5 shadow-inner">
-                            <button onClick={() => onVote(_id, 'upvote')} className="p-2.5 hover:text-accent-green transition-all rounded-xl hover:bg-accent-green/10" ><ThumbsUp size={20} /></button>
+                            <button onClick={() => onVote(_id, 'upvote')} className={clsx("p-2.5 transition-all rounded-xl", post.hasUpvoted ? "text-accent-green bg-accent-green/10" : "hover:text-accent-green hover:bg-accent-green/10")} ><ThumbsUp size={20} fill={post.hasUpvoted ? "currentColor" : "none"} /></button>
                             <span className="text-sm font-black w-8 text-center tabular-nums">{upvotes - downvotes}</span>
-                            <button onClick={() => onVote(_id, 'downvote')} className="p-2.5 hover:text-accent-red transition-all rounded-xl hover:bg-accent-red/10" ><ThumbsDown size={20} /></button>
+                            <button onClick={() => onVote(_id, 'downvote')} className={clsx("p-2.5 transition-all rounded-xl", post.hasDownvoted ? "text-accent-red bg-accent-red/10" : "hover:text-accent-red hover:bg-accent-red/10")} ><ThumbsDown size={20} fill={post.hasDownvoted ? "currentColor" : "none"} /></button>
                         </div>
 
                         <button onClick={() => setShowComments(!showComments)} className={clsx("flex items-center gap-2.5 px-4 py-2.5 rounded-2xl transition-all font-bold text-sm", showComments ? "bg-primary-blue/20 text-primary-blue" : "hover:bg-white/5 text-text-muted")}><MessageCircle size={20} /><span>{localComments.length}</span></button>
