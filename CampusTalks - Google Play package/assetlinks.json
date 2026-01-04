@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.campus_talkss.twa",
+        "sha256_cert_fingerprints": ["F5:2C:AB:EC:2A:5E:3D:87:14:57:60:6B:99:36:FE:03:C4:AE:BD:B8:A8:DD:3A:AA:DF:63:87:01:80:E8:B5:F1"]
+      }
+    }]

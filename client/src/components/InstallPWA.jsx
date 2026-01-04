@@ -6,6 +6,7 @@ const InstallPWA = () => {
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [isVisible, setIsVisible] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
+    const [isAndroid, setIsAndroid] = useState(false);
 
     useEffect(() => {
         // Check if already installed
@@ -13,9 +14,12 @@ const InstallPWA = () => {
             return;
         }
 
-        // Check if iOS
-        const isIPhone = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
-        setIsIOS(isIPhone);
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        const android = /android/i.test(userAgent);
+        const ios = /iPhone|iPad|iPod/.test(userAgent) && !window.MSStream;
+
+        setIsAndroid(android);
+        setIsIOS(ios);
 
         const handler = (e) => {
             // Prevent Chrome 67 and earlier from automatically showing the prompt
@@ -32,8 +36,8 @@ const InstallPWA = () => {
 
         window.addEventListener('beforeinstallprompt', handler);
 
-        // For iOS, we can't detect "beforeinstallprompt", so we show a manual hint
-        if (isIPhone && !sessionStorage.getItem('pwa_prompt_dismissed')) {
+        // Show prompt for iOS or Android if valid
+        if ((ios || android) && !sessionStorage.getItem('pwa_prompt_dismissed')) {
             setTimeout(() => setIsVisible(true), 5000);
         }
 
@@ -41,6 +45,18 @@ const InstallPWA = () => {
     }, []);
 
     const handleInstall = async () => {
+        if (isAndroid) {
+            // Direct APK Download
+            const link = document.createElement('a');
+            link.href = '/downloads/CampusTalks.apk';
+            link.download = 'CampusTalks.apk';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setIsVisible(false);
+            return;
+        }
+
         if (isIOS) {
             // iOS instructions are usually handled by a different UI, but we'll just show guidance
             alert('To install: Tap the "Share" button and then "Add to Home Screen" 📲');
@@ -115,7 +131,7 @@ const InstallPWA = () => {
                                         className="px-6 py-2 bg-primary-gradient text-white font-black text-[10px] uppercase tracking-widest rounded-lg hover:scale-105 transition-all shadow-glow-sm flex items-center gap-2"
                                     >
                                         {isIOS ? <Share size={12} /> : <Download size={12} />}
-                                        {isIOS ? 'Setup' : 'Install App'}
+                                        {isIOS ? 'Setup' : 'Download APK'}
                                     </button>
                                 </div>
                             </div>
