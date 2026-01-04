@@ -14,6 +14,10 @@ import PollCard from './components/PollCard';
 import CreatePollModal from './components/CreatePollModal';
 import AdminDashboard from './components/AdminDashboard';
 import Logo from './components/Logo';
+import PopupAd from './components/PopupAd';
+import BannerAd from './components/BannerAd';
+import Sponsors from './components/Sponsors';
+import InstallPWA from './components/InstallPWA';
 import { Toaster, toast } from 'react-hot-toast';
 import { Ghost, ShieldCheck, ArrowRight, MessageSquare, Target, ShieldAlert } from 'lucide-react';
 
@@ -33,6 +37,7 @@ function App() {
 
   // State
   const [loading, setLoading] = useState(true);
+  const [bannerAds, setBannerAds] = useState([]);
   const [showLegal, setShowLegal] = useState(!localStorage.getItem('campus_talks_legal_accepted'));
   const [isAdmin, setIsAdmin] = useState(!!localStorage.getItem('campus_talks_admin_token'));
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('campus_talks_user')));
@@ -46,8 +51,11 @@ function App() {
     }
   }, []);
 
-  // Axios Global Interceptor for Auth
+  // Axios Global Configuration
   useEffect(() => {
+    // Set base URL for all requests
+    axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -61,39 +69,58 @@ function App() {
     return () => axios.interceptors.response.eject(interceptor);
   }, []);
 
-  const fetchPosts = async (overrideCategory) => {
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+  // ... (existing code)
+
+  const fetchPosts = async (reset = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+        setPage(1);
+      } else {
+        setIsFetchingMore(true);
+      }
+
       const token = localStorage.getItem('campus_talks_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const activeCategory = overrideCategory || category;
+      const activeCategory = category;
+      const currentPage = reset ? 1 : page;
 
-      const res = await axios.get('http://127.0.0.1:5000/api/posts', {
+      const res = await axios.get('/api/posts', {
         headers,
         params: {
           category: activeCategory !== 'All' ? activeCategory : undefined,
           sort: sort,
+          page: currentPage,
+          limit: 10, // Load 10 at a time
           _t: Date.now() // Cache buster
         }
       });
-      setPosts(res.data);
+
+      const newPosts = res.data.posts || [];
+      setHasMore(res.data.hasMore);
+
+      if (reset) {
+        setPosts(newPosts);
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+      }
+
+      if (!reset) setPage(prev => prev + 1);
+      else setPage(2); // Next page will be 2
+
     } catch (err) {
       console.error(err);
-      // Only show error for actual network failures
       if (err.message === 'Network Error' || !err.response) {
         toast.error('Failed to sync with campus');
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handlePostCreated = (newPostCategory) => {
-    if (category !== 'All' && category !== newPostCategory) {
-      setCategory('All');
-    } else {
-      fetchPosts();
+      setIsFetchingMore(false);
     }
   };
 
@@ -103,7 +130,7 @@ function App() {
       const token = localStorage.getItem('campus_talks_token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const res = await axios.get('http://127.0.0.1:5000/api/polls', { headers });
+      const res = await axios.get('/api/polls', { headers });
       setPolls(res.data);
     } catch (err) {
       console.error(err);
@@ -112,19 +139,83 @@ function App() {
     }
   };
 
+  const handlePostCreated = (newPostCategory) => {
+    if (category !== 'All' && category !== newPostCategory) {
+      setCategory('All');
+    }
+    fetchPosts(true);
+  };
+
+  // Effect to reset and fetch when filters change
   useEffect(() => {
-    if (view === 'whispers') fetchPosts();
+    if (view === 'whispers') fetchPosts(true);
     else fetchPolls();
   }, [category, sort, view]);
 
+  // Fetch banner ads
+  useEffect(() => {
+    const fetchBannerAds = async () => {
+      try {
+        const res = await axios.get('/api/ads?type=banner');
+        setBannerAds(res.data);
+      } catch (err) {
+        console.error('Failed to fetch banner ads:', err);
+      }
+    };
+
+    if (user) {
+      fetchBannerAds();
+    }
+  }, [user]);
+
   const handleVote = async (postId, type) => {
     const prevPosts = [...posts];
+
+    // Optimistic Update
     setPosts(prevPosts.map(post => {
       if (post._id === postId) {
+        const { hasUpvoted, hasDownvoted } = post;
+        let newUpvotes = post.upvotes;
+        let newDownvotes = post.downvotes;
+        let newHasUpvoted = hasUpvoted;
+        let newHasDownvoted = hasDownvoted;
+
+        if (type === 'upvote') {
+          if (hasUpvoted) {
+            // Toggle Off
+            newUpvotes = Math.max(0, newUpvotes - 1);
+            newHasUpvoted = false;
+          } else {
+            // Toggle On
+            newUpvotes += 1;
+            newHasUpvoted = true;
+            if (hasDownvoted) {
+              newDownvotes = Math.max(0, newDownvotes - 1);
+              newHasDownvoted = false;
+            }
+          }
+        } else if (type === 'downvote') {
+          if (hasDownvoted) {
+            // Toggle Off
+            newDownvotes = Math.max(0, newDownvotes - 1);
+            newHasDownvoted = false;
+          } else {
+            // Toggle On
+            newDownvotes += 1;
+            newHasDownvoted = true;
+            if (hasUpvoted) {
+              newUpvotes = Math.max(0, newUpvotes - 1);
+              newHasUpvoted = false;
+            }
+          }
+        }
+
         return {
           ...post,
-          upvotes: type === 'upvote' ? (post.upvotes || 0) + 1 : post.upvotes,
-          downvotes: type === 'downvote' ? (post.downvotes || 0) + 1 : post.downvotes
+          upvotes: newUpvotes,
+          downvotes: newDownvotes,
+          hasUpvoted: newHasUpvoted,
+          hasDownvoted: newHasDownvoted
         };
       }
       return post;
@@ -132,8 +223,15 @@ function App() {
 
     try {
       const token = localStorage.getItem('campus_talks_token');
-      await axios.patch(`http://127.0.0.1:5000/api/posts/${postId}/vote`, { type }, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      // If not logged in, error/redirect? Usually should check before
+      if (!token) {
+        setIsAuthModalOpen(true);
+        setPosts(prevPosts); // Revert
+        return;
+      }
+
+      await axios.patch(`/api/posts/${postId}/vote`, { type }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {
       toast.error('Could not update vote');
@@ -161,40 +259,40 @@ function App() {
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary-blue/20 rounded-full blur-[120px] animate-pulse delay-1000" />
         </div>
 
-        <nav className="relative z-10 w-full max-w-7xl mx-auto px-8 py-10 flex items-center justify-between">
+        <nav className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10 flex items-center justify-between">
           <Logo />
-          <div className="flex gap-4">
+          <div className="flex gap-2 sm:gap-4">
             {isAdmin && (
-              <button onClick={() => setIsAdminDashboardOpen(true)} className="px-6 py-3 bg-accent-red/20 text-accent-red font-black uppercase text-[10px] tracking-widest rounded-2xl border border-accent-red/30 flex items-center gap-2 hover:bg-accent-red hover:text-white transition-all">
-                <ShieldAlert size={14} /> Admin Terminal
+              <button onClick={() => setIsAdminDashboardOpen(true)} className="px-4 sm:px-6 py-2.5 sm:py-3 bg-accent-red/20 text-accent-red font-black uppercase text-[10px] tracking-widest rounded-xl sm:rounded-2xl border border-accent-red/30 flex items-center gap-2 hover:bg-accent-red hover:text-white transition-all">
+                <ShieldAlert size={14} /> <span className="hidden xs:inline">Admin</span>
               </button>
             )}
-            <button onClick={() => setIsAuthModalOpen(true)} className="px-8 py-3 bg-white text-black font-bold rounded-2xl hover:scale-105 transition-all shadow-xl shadow-white/10 active:scale-95">Sign In</button>
+            <button onClick={() => setIsAuthModalOpen(true)} className="px-6 sm:px-8 py-2.5 sm:py-3 bg-white text-black font-bold rounded-xl sm:rounded-2xl hover:scale-105 transition-all shadow-xl shadow-white/10 active:scale-95 text-xs sm:text-sm">Sign In</button>
           </div>
         </nav>
 
-        <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-4 max-w-4xl mx-auto py-20">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-black uppercase tracking-[0.2em] text-primary-purple animate-bounce">
-              <ShieldCheck size={14} /> Encrypted & Anonymous
+        <main className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-6 max-w-4xl mx-auto py-12 sm:py-20">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="space-y-6 sm:space-y-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[9px] sm:text-xs font-black uppercase tracking-[0.2em] text-primary-purple animate-bounce">
+              <ShieldCheck size={12} className="sm:w-3.5 sm:h-3.5" /> Encrypted & Anonymous
             </div>
-            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-display font-black leading-[0.9] tracking-tighter">
+            <h1 className="text-4xl sm:text-7xl lg:text-8xl font-display font-black leading-[1] sm:leading-[0.9] tracking-tighter">
               The heartbeat of <br /> <span className="gradient-text">your campus.</span>
             </h1>
-            <p className="text-xl text-text-muted font-medium max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-xl text-text-muted font-medium max-w-2xl mx-auto leading-relaxed px-4">
               Connect effortlessly with your university peers. No judgment, no identities, just real talk and live polls.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
-              <button onClick={() => setIsAuthModalOpen(true)} className="px-10 py-5 bg-primary-gradient text-white font-bold rounded-3xl shadow-2xl shadow-primary-purple/25 hover:scale-105 transition-all flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 sm:pt-6">
+              <button onClick={() => setIsAuthModalOpen(true)} className="w-full sm:w-auto px-10 py-4 sm:py-5 bg-primary-gradient text-white font-bold rounded-2xl sm:rounded-3xl shadow-2xl shadow-primary-purple/25 hover:scale-105 transition-all flex items-center justify-center gap-3">
                 Join the Community <ArrowRight size={20} />
               </button>
-              <div className="px-6 py-5 bg-white/5 border border-white/10 rounded-3xl text-sm font-bold backdrop-blur-md">
+              <div className="w-full sm:w-auto px-6 py-4 sm:py-5 bg-white/5 border border-white/10 rounded-2xl sm:rounded-3xl text-sm font-bold backdrop-blur-md">
                 <span className="text-primary-purple">1.2k+</span> active ghosts today
               </div>
             </div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 1 }} className="mt-24 grid grid-cols-1 sm:grid-cols-3 gap-8 w-full">
+          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 1 }} className="mt-16 sm:mt-24 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 w-full">
             <FeatureCard icon={<MessageSquare />} title="True Anonymity" desc="Encrypted user hashes ensure your identity stays hidden." />
             <FeatureCard icon={<Target />} title="Live Polls" desc="Real-time feedback on campus trends and decisions." />
             <FeatureCard icon={<Ghost />} title="Persona System" desc="Maintain consistent pseudonyms across all your whispers." />
@@ -210,6 +308,8 @@ function App() {
           {isAdminModalOpen && <AdminLoginModal onClose={() => setIsAdminModalOpen(false)} onLoginSuccess={() => { setIsAdmin(true); setIsAdminDashboardOpen(true); }} />}
           {isAdminDashboardOpen && <AdminDashboard onClose={() => setIsAdminDashboardOpen(false)} />}
         </AnimatePresence>
+
+        <InstallPWA />
       </div>
     );
   }
@@ -229,20 +329,20 @@ function App() {
         onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <Hero onOpenCreate={() => setIsModalOpen(true)} />
 
-        <div className="flex items-center gap-4 mb-8 bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 w-max mx-auto shadow-inner">
-          <button onClick={() => setView('whispers')} className={clsx("px-8 py-2.5 rounded-xl text-sm font-bold transition-all", view === 'whispers' ? "bg-white text-black shadow-lg" : "text-text-muted hover:text-white")}>Whispers</button>
-          <button onClick={() => setView('polls')} className={clsx("px-8 py-2.5 rounded-xl text-sm font-bold transition-all", view === 'polls' ? "bg-white text-black shadow-lg" : "text-text-muted hover:text-white")}>Polls</button>
+        <div className="flex items-center gap-2 sm:gap-4 mb-6 sm:mb-8 bg-slate-900/50 p-1 rounded-2xl border border-white/5 w-max mx-auto shadow-inner">
+          <button onClick={() => setView('whispers')} className={clsx("px-6 sm:px-8 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all", view === 'whispers' ? "bg-white text-black shadow-lg" : "text-text-muted hover:text-white")}>Whispers</button>
+          <button onClick={() => setView('polls')} className={clsx("px-6 sm:px-8 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all", view === 'polls' ? "bg-white text-black shadow-lg" : "text-text-muted hover:text-white")}>Polls</button>
         </div>
 
         {view === 'whispers' && <CategoryBar selected={category} onSelect={setCategory} />}
 
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-display font-bold text-text-primary flex items-center gap-2">
-            {view === 'whispers' ? (category === 'All' ? 'Recent Whispers' : `${category} Whispers`) : 'Active Polls'}
-            {loading && <div className="w-1 h-1 bg-primary-purple rounded-full animate-ping" />}
+        <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
+          <h2 className="text-lg sm:text-xl font-display font-black text-text-primary flex items-center gap-2">
+            {view === 'whispers' ? (category === 'All' ? 'Recent' : `${category}`) : 'Active Polls'}
+            {loading && <div className="w-1.5 h-1.5 bg-primary-purple rounded-full animate-ping" />}
           </h2>
 
           <div className="flex items-center gap-4">
@@ -269,15 +369,50 @@ function App() {
               <motion.div key={view + category + sort} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3 }} className="grid gap-6" >
                 {view === 'whispers' ? (
                   posts.length === 0 ? <EmptyState onAction={() => setIsModalOpen(true)} /> :
-                    posts.map(post => <PostCard key={post._id} post={post} onVote={handleVote} onReport={fetchPosts} onUpdated={fetchPosts} />)
+                    <>
+                      {posts.map(post => <PostCard key={post._id} post={post} onVote={handleVote} onReport={() => fetchPosts(true)} onUpdated={() => fetchPosts(true)} />)}
+                      {hasMore && (
+                        <div className="flex justify-center pt-6 pb-2">
+                          <button
+                            onClick={() => fetchPosts(false)}
+                            disabled={isFetchingMore}
+                            className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-all disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {isFetchingMore ? (
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <>Load More Whispers <ArrowRight size={16} /></>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </>
                 ) : (
                   polls.length === 0 ? <EmptyState onAction={() => setIsPollModalOpen(true)} label="No active polls found." buttonLabel="Launch first poll" /> :
-                    polls.map(poll => <PollCard key={poll._id} poll={poll} onVoteUpdate={(updated) => setPolls(polls.map(p => p._id === updated._id ? updated : p))} />)
+                    polls.map(poll => <PollCard key={poll._id} poll={poll} onVoteUpdate={(updated) => {
+                      if (updated.deleted) {
+                        setPolls(polls.filter(p => p._id !== updated._id));
+                      } else {
+                        setPolls(polls.map(p => p._id === updated._id ? updated : p));
+                      }
+                    }} />)
                 )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
+
+        {/* Banner Ads */}
+        {bannerAds.length > 0 && (
+          <div className="mt-8 space-y-6">
+            {bannerAds.map((ad) => (
+              <BannerAd key={ad._id} ad={ad} />
+            ))}
+          </div>
+        )}
+
+        {/* Sponsors Section */}
+        <Sponsors />
       </main>
 
       <footer className="py-20 border-t border-white/5 text-center text-text-muted mt-20">
@@ -304,9 +439,39 @@ function App() {
         {isAdminDashboardOpen && <AdminDashboard onClose={() => setIsAdminDashboardOpen(false)} />}
         {showLegal && <LegalModal onAccept={() => { localStorage.setItem('campus_talks_legal_accepted', 'true'); setShowLegal(false); }} />}
       </AnimatePresence>
+
+      {/* Popup Ad */}
+      {user && <PopupAd />}
+      <InstallPWA />
+
+      <ScrollToTop />
     </div>
   );
 }
+
+const ScrollToTop = () => {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const toggle = () => setVisible(window.scrollY > 500);
+    window.addEventListener('scroll', toggle);
+    return () => window.removeEventListener('scroll', toggle);
+  }, []);
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 z-[100] p-4 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl text-white shadow-2xl hover:bg-white/20 transition-all active:scale-95"
+        >
+          <ArrowRight size={24} className="-rotate-90" />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+};
 
 const FeatureCard = ({ icon, title, desc }) => (
   <div className="p-8 bg-white/[0.03] border border-white/[0.05] rounded-[2.5rem] text-left hover:bg-white/[0.06] transition-all group">

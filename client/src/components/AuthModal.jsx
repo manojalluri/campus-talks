@@ -31,7 +31,7 @@ const AuthModal = ({ onClose, onSuccess }) => {
         const payload = isLogin ? formData : { ...formData, avatar: selectedAvatar };
 
         try {
-            const res = await axios.post(`http://127.0.0.1:5000${endpoint}`, payload);
+            const res = await axios.post(endpoint, payload);
             localStorage.setItem('campus_talks_user', JSON.stringify(res.data.user));
             localStorage.setItem('campus_talks_token', res.data.token);
             toast.success(isLogin ? `Welcome back, ${res.data.user.username}!` : 'Account created successfully!');

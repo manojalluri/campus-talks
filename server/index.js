@@ -8,14 +8,26 @@ import authRoutes from './routes/auth.js';
 import pollRoutes from './routes/polls.js';
 import adminRoutes from './routes/admin.js';
 import categoryRoutes from './routes/categories.js';
+import adRoutes from './routes/ads.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Validate Critical Environment Variables
+const requiredEnv = ['MONGO_URI', 'JWT_SECRET', 'HASH_PEPPER'];
+const missingEnv = requiredEnv.filter(k => !process.env[k]);
+if (missingEnv.length > 0) {
+    console.error(`❌ CRITICAL ERROR: Missing Environment Variables: ${missingEnv.join(', ')}`);
+    process.exit(1);
+}
+
+// Trust Proxy (Essential for Rate Limiting on Vercel/Render)
+app.set('trust proxy', 1);
+
 // Rate Limiters
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 500, // Limit each IP to 500 requests per windowMs (Higher for 22k users)
     message: 'Too many requests from this device. Please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -44,22 +56,21 @@ app.use((req, res, next) => {
     next();
 });
 
-// Middleware - Refined CORS
+// Middleware - Refined CORS for Production
 const allowedOrigins = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
+    'https://campustalks.vercel.app',
+    'https://campus-talks.vercel.app'
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
-            return callback(null, true); // Still allowing all for dev, but prepared for lockdown
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
         }
-        return callback(null, true);
+        return callback(new Error('Blocked by CORS policy'));
     },
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -87,16 +98,25 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/polls', pollRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/ads', adRoutes);
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Connected to MongoDB Atlas'))
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Error Handler
+// Production-Safe Error Handler
 app.use((err, req, res, next) => {
-    console.error('Unhandled Error:', err);
-    res.status(500).json({ message: err.message || 'Internal Server Error' });
+    console.error(`[ERROR] ${req.method} ${req.url}:`, err.stack);
+    const status = err.status || 500;
+    const message = process.env.NODE_ENV === 'production'
+        ? 'A system error occurred. Our team has been notified.'
+        : err.message;
+
+    res.status(status).json({
+        message,
+        status: 'error'
+    });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

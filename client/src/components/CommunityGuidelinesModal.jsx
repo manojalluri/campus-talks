@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, ShieldAlert, Gavel, EyeOff, Scale, ShieldCheck, HeartPulse } from 'lucide-react';
 
 const CommunityGuidelinesModal = ({ onClose }) => {
@@ -42,7 +42,7 @@ const CommunityGuidelinesModal = ({ onClose }) => {
                             <h3 className="text-sm font-black uppercase tracking-widest">1. ZERO TOLERANCE POLICY</h3>
                         </div>
                         <p className="text-text-secondary text-sm leading-relaxed font-medium">
-                            WhisperCampus maintains a strict zero-tolerance policy towards targeted harassment, cyberbullying, doxxing (releasing private information), or hate speech based on race, gender, religion, or sexual orientation. Users found engaging in systemic bullying will be permanently banned and their device IDs blacklisted.
+                            Campus Talks maintains a strict zero-tolerance policy towards targeted harassment, cyberbullying, doxxing (releasing private information), or hate speech based on race, gender, religion, or sexual orientation. Users found engaging in systemic bullying will be permanently banned and their device IDs blacklisted.
                         </p>
                     </section>
 
@@ -52,7 +52,7 @@ const CommunityGuidelinesModal = ({ onClose }) => {
                             <h3 className="text-sm font-black uppercase tracking-widest">2. LIABILITY & LEGAL INDEMNITY</h3>
                         </div>
                         <p className="text-text-secondary text-sm leading-relaxed font-medium">
-                            By using this platform, you acknowledge that <span className="text-white">WhisperCampus operates as a neutral service provider</span> under the "Safe Harbor" doctrine. All content is user-generated. You agree to indemnify and hold WhisperCampus and its operators harmless from any legal claims, damages, or liabilities arising from the content you publish.
+                            By using this platform, you acknowledge that <span className="text-white">Campus Talks operates as a neutral service provider</span> under the "Safe Harbor" doctrine. All content is user-generated. You agree to indemnify and hold Campus Talks and its operators harmless from any legal claims, damages, or liabilities arising from the content you publish.
                         </p>
                     </section>
 
@@ -62,7 +62,7 @@ const CommunityGuidelinesModal = ({ onClose }) => {
                             <h3 className="text-sm font-black uppercase tracking-widest">3. SELF-HARM & THREATS</h3>
                         </div>
                         <p className="text-text-secondary text-sm leading-relaxed font-medium">
-                            Posts containing specific threats of violence, self-harm, or intentions to harm others are strictly prohibited. In cases of credible threats to life or limb, WhisperCampus reserves the right to cooperate with university security and local law enforcement to ensure campus safety, notwithstanding our anonymity tools.
+                            Posts containing specific threats of violence, self-harm, or intentions to harm others are strictly prohibited. In cases of credible threats to life or limb, Campus Talks reserves the right to cooperate with university security and local law enforcement to ensure campus safety, notwithstanding our anonymity tools.
                         </p>
                     </section>
 
@@ -72,7 +72,7 @@ const CommunityGuidelinesModal = ({ onClose }) => {
                             <h3 className="text-sm font-black uppercase tracking-widest">4. BOUNDARIES OF ANONYMITY</h3>
                         </div>
                         <p className="text-text-secondary text-sm leading-relaxed font-medium">
-                            While we provide advanced encryption to hide your identity from other users, <span className="text-white italic">Anonymity is a privilege, not a shield for criminal activity.</span> WhisperCampus will respond to valid legal requests, subpoenas, or court orders if required by law to prevent a crime or identify a perpetrator of illegal acts.
+                            While we provide advanced encryption to hide your identity from other users, <span className="text-white italic">Anonymity is a privilege, not a shield for criminal activity.</span> Campus Talks will respond to valid legal requests, subpoenas, or court orders if required by law to prevent a crime or identify a perpetrator of illegal acts.
                         </p>
                     </section>
 

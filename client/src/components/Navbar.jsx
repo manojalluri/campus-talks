@@ -14,27 +14,27 @@ const Navbar = ({ onOpenCreate, user, onLogOut, onOpenAuth }) => {
                 <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
 
                     {/* Logo Section */}
-                    <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 px-6 py-3 rounded-[2rem] shadow-2xl flex items-center gap-4">
+                    <div className="bg-slate-900/60 backdrop-blur-2xl border border-white/5 px-4 sm:px-6 py-2 sm:py-3 rounded-full shadow-2xl flex items-center gap-2 sm:gap-4">
                         <Logo sm />
                     </div>
 
                     {/* Dynamic Actions */}
-                    <div className="flex items-center gap-3 bg-slate-900/40 backdrop-blur-xl border border-white/5 p-2 rounded-[2rem] shadow-2xl">
+                    <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/60 backdrop-blur-2xl border border-white/5 p-1.5 sm:p-2 rounded-full shadow-2xl">
                         {user ? (
                             <>
                                 <button
                                     onClick={onOpenCreate}
-                                    className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-primary-gradient text-white rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow-sm"
+                                    className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-gradient text-white rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-glow-sm"
                                 >
-                                    <Plus size={16} /> Whisper
+                                    <Plus size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Whisper</span>
                                 </button>
 
-                                <div className="h-8 w-px bg-white/5 mx-2" />
+                                <div className="h-6 sm:h-8 w-px bg-white/10 mx-1 sm:mx-2" />
 
                                 <div className="relative">
                                     <button
                                         onClick={() => setIsProfileOpen(!isProfileOpen)}
-                                        className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-xl hover:border-primary-purple border border-transparent transition-all"
+                                        className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-800 rounded-full flex items-center justify-center text-lg sm:text-xl hover:border-primary-purple border border-transparent transition-all overflow-hidden"
                                     >
                                         {user.avatar || '👻'}
                                     </button>
@@ -45,28 +45,29 @@ const Navbar = ({ onOpenCreate, user, onLogOut, onOpenAuth }) => {
                                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                                className="absolute right-0 mt-4 w-64 bg-[#0f172a] border border-white/10 rounded-3xl shadow-4xl p-2 z-[60]"
+                                                className="absolute right-0 mt-4 w-64 bg-[#0f172a] border border-white/10 rounded-3xl shadow-4xl p-2 z-[60] overflow-hidden"
                                             >
-                                                <div className="p-4 border-b border-white/5 mb-2">
-                                                    <p className="text-[10px] text-text-muted font-black uppercase tracking-widest mb-1">Signed in as</p>
-                                                    <p className="text-white font-bold font-display flex items-center gap-2">
-                                                        <span className="text-xl">{user.avatar}</span> {user.username}
+                                                <div className="p-4 border-b border-white/5 mb-2 bg-white/5 rounded-t-2xl">
+                                                    <p className="text-[9px] text-text-muted font-black uppercase tracking-widest mb-1">Signed in as</p>
+                                                    <p className="text-white font-bold font-display flex items-center gap-2 truncate">
+                                                        <span className="text-xl flex-shrink-0">{user.avatar}</span>
+                                                        <span className="truncate">{user.username}</span>
                                                     </p>
-                                                    <p className="text-[10px] text-text-muted/60 truncate mt-1">{user.email}</p>
+                                                    <p className="text-[9px] text-text-muted/60 truncate mt-1">{user.email}</p>
                                                 </div>
 
                                                 <button
                                                     onClick={() => { setIsEditModalOpen(true); setIsProfileOpen(false); }}
-                                                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-text-secondary hover:bg-white/5 rounded-2xl transition-all"
+                                                    className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-text-secondary hover:bg-white/5 rounded-2xl transition-all"
                                                 >
-                                                    <UserIcon size={16} /> Edit Persona
+                                                    <UserIcon size={14} /> Edit Persona
                                                 </button>
 
                                                 <button
                                                     onClick={() => { onLogOut(); setIsProfileOpen(false); }}
-                                                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-accent-red hover:bg-accent-red/10 rounded-2xl transition-all"
+                                                    className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-accent-red hover:bg-accent-red/10 rounded-2xl transition-all"
                                                 >
-                                                    <LogOut size={16} /> Logout Persona
+                                                    <LogOut size={14} /> Logout Persona
                                                 </button>
                                             </motion.div>
                                         )}
@@ -76,7 +77,7 @@ const Navbar = ({ onOpenCreate, user, onLogOut, onOpenAuth }) => {
                         ) : (
                             <button
                                 onClick={onOpenAuth}
-                                className="px-6 py-2.5 bg-white text-black rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl"
+                                className="px-5 sm:px-8 py-2 sm:py-2.5 bg-white text-black rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/10 active:scale-95"
                             >
                                 Get Access
                             </button>

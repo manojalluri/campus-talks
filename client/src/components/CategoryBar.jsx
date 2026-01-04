@@ -8,9 +8,9 @@ const CategoryBar = ({ selected, onSelect }) => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const res = await axios.get('http://127.0.0.1:5000/api/categories');
+                const res = await axios.get('/api/categories');
                 setCategories([{ id: 'All', label: 'All', icon: '✨' }, ...res.data]);
-            } catch (err) {
+            } catch (_err) {
                 console.error('Failed to fetch categories');
             }
         };
@@ -18,9 +18,9 @@ const CategoryBar = ({ selected, onSelect }) => {
     }, []);
 
     return (
-        <div className="sticky top-16 z-40 bg-bg-dark/80 backdrop-blur-xl border-b border-white/5 py-4 mb-6 touch-pan-x">
-            <div className="max-w-7xl mx-auto px-4 overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-3 w-max">
+        <div className="sticky top-20 sm:top-24 z-40 bg-bg-dark/80 backdrop-blur-xl border-b border-white/5 py-3 sm:py-4 mb-6 touch-pan-x">
+            <div className="max-w-7xl mx-auto px-4 overflow-x-auto no-scrollbar scroll-smooth">
+                <div className="flex items-center gap-2 sm:gap-3 w-max pr-8">
                     {categories.map((cat) => (
                         <button
                             key={cat._id || cat.id}

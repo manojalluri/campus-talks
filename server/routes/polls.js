@@ -98,4 +98,46 @@ router.post('/:id/vote', auth, async (req, res) => {
     }
 });
 
+// Edit a poll
+router.put('/:id', auth, async (req, res) => {
+    try {
+        const { question, options } = req.body;
+        const userHash = getUserHash(req);
+
+        const poll = await Poll.findById(req.params.id);
+        if (!poll) return res.status(404).json({ message: 'Poll not found' });
+
+        if (poll.userHash !== userHash) {
+            return res.status(403).json({ message: 'You do not have permission to edit this poll' });
+        }
+
+        if (question) poll.question = question;
+
+        // Update options if provided (complex: map by ID or index?)
+        // Simple approach: Replace options if provided, BUT this wipes votes if IDs change.
+        // Better approach: Update text matches or expect IDs.
+        // For this iteration, let's assume simple text update if no votes, or just allow question edit.
+        // Given complexity, I will allow question edit always, and option text edit.
+
+        if (options && Array.isArray(options)) {
+            // If options have IDs, update them. If strings, difficult to map.
+            // Assuming simple array of strings for now as per Create flow.
+            // To preserve votes, we only update text if count matches?
+            // Let's just update the question for safety in this version unless requested otherwise.
+            // Actually, the user specifically asked to "edit the poll option".
+            // I will try to map by index.
+            options.forEach((optText, idx) => {
+                if (poll.options[idx]) {
+                    poll.options[idx].text = optText;
+                }
+            });
+        }
+
+        await poll.save();
+        res.json(poll);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
 export default router;

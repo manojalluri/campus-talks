@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, MessageSquare, BarChart3, AlertCircle, Trash2,
     ShieldAlert, RefreshCw, ChevronRight, Search, Ghost, X,
-    Ban, ShieldCheck, Zap, LogOut, Tags, Edit3, Plus, Save, Lock, Menu
+    Ban, ShieldCheck, Zap, LogOut, Tags, Edit3, Plus, Save, Lock, Menu, Megaphone
 } from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
+import AdManager from './AdManager';
 
 const NavItem = ({ active, onClick, icon, label, count }) => (
     <button onClick={onClick} className={clsx("w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all font-black text-[10px] uppercase tracking-[0.2em]", active ? "bg-primary-gradient text-white shadow-glow" : "text-text-muted hover:text-white hover:bg-white/5")}>
@@ -21,11 +22,11 @@ const NavItem = ({ active, onClick, icon, label, count }) => (
 );
 
 const StatCard = ({ label, value, icon, danger }) => (
-    <div className={clsx("bg-slate-900/50 border p-8 sm:p-12 rounded-[2.5rem] sm:rounded-[3.5rem] space-y-6 sm:space-y-8 shadow-2xl", danger ? "border-accent-red/30 bg-accent-red/5" : "border-white/5")}>
-        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-2xl sm:rounded-3xl flex items-center justify-center text-2xl sm:text-3xl">{icon}</div>
+    <div className={clsx("bg-slate-900/50 border p-6 sm:p-12 rounded-[2rem] sm:rounded-[3.5rem] space-y-4 sm:space-y-8 shadow-2xl", danger ? "border-accent-red/30 bg-accent-red/5" : "border-white/5")}>
+        <div className="w-10 h-10 sm:w-16 sm:h-16 bg-white/5 rounded-xl sm:rounded-3xl flex items-center justify-center text-xl sm:text-3xl">{icon}</div>
         <div>
-            <p className="text-[10px] sm:text-[12px] text-text-muted uppercase font-black tracking-[0.4em] mb-2 sm:mb-3">{label}</p>
-            <p className="text-4xl sm:text-6xl font-display font-black text-white">{value}</p>
+            <p className="text-[9px] sm:text-[12px] text-text-muted uppercase font-black tracking-[0.4em] mb-1.5 sm:mb-3">{label}</p>
+            <p className="text-3xl sm:text-6xl font-display font-black text-white">{value}</p>
         </div>
     </div>
 );
@@ -63,7 +64,7 @@ const AdminDashboard = ({ onClose }) => {
 
     const fetchStats = async () => {
         try {
-            const res = await axios.get('http://127.0.0.1:5000/api/admin/stats', {
+            const res = await axios.get('/api/admin/stats', {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             if (res.data) setStats(res.data);
@@ -84,7 +85,7 @@ const AdminDashboard = ({ onClose }) => {
         if (activeTab === 'categories') endpoint = '/api/admin/categories';
 
         try {
-            const res = await axios.get(`http://127.0.0.1:5000${endpoint}`, {
+            const res = await axios.get(endpoint, {
                 headers: { Authorization: `Bearer ${adminToken}` },
                 params: { search: searchQuery }
             });
@@ -114,7 +115,7 @@ const AdminDashboard = ({ onClose }) => {
 
     const handleToggleBan = async (id, currentStatus) => {
         try {
-            await axios.post(`http://127.0.0.1:5000/api/admin/users/${id}/ban`, {}, {
+            await axios.post(`/api/admin/users/${id}/ban`, {}, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('User status updated');
@@ -127,7 +128,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeletePost = async (id) => {
         if (!window.confirm('Delete this content permanently?')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/posts/${id}`, {
+            await axios.delete(`/api/admin/posts/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('Post removed');
@@ -141,7 +142,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeletePoll = async (id) => {
         if (!window.confirm('Delete this poll permanently?')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/polls/${id}`, {
+            await axios.delete(`/api/admin/polls/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('Poll removed');
@@ -155,7 +156,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeleteUser = async (id) => {
         if (!window.confirm('Erase this user record forever?')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/users/${id}`, {
+            await axios.delete(`/api/admin/users/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('User erased');
@@ -171,12 +172,12 @@ const AdminDashboard = ({ onClose }) => {
         e.preventDefault();
         try {
             if (editingCategory._id) {
-                await axios.patch(`http://127.0.0.1:5000/api/admin/categories/${editingCategory._id}`, editingCategory, {
+                await axios.patch(`/api/admin/categories/${editingCategory._id}`, editingCategory, {
                     headers: { Authorization: `Bearer ${adminToken}` }
                 });
                 toast.success('Category updated');
             } else {
-                await axios.post(`http://127.0.0.1:5000/api/admin/categories`, editingCategory, {
+                await axios.post(`/api/admin/categories`, editingCategory, {
                     headers: { Authorization: `Bearer ${adminToken}` }
                 });
                 toast.success('Category created');
@@ -191,7 +192,7 @@ const AdminDashboard = ({ onClose }) => {
     const handleDeleteCategory = async (id) => {
         if (!window.confirm('Delete this category? Posts in this category will remain but the filter might break.')) return;
         try {
-            await axios.delete(`http://127.0.0.1:5000/api/admin/categories/${id}`, {
+            await axios.delete(`/api/admin/categories/${id}`, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
             toast.success('Category removed');
@@ -244,6 +245,7 @@ const AdminDashboard = ({ onClose }) => {
                     <NavItem active={activeTab === 'reported'} onClick={() => setActiveTab('reported')} icon={<AlertCircle size={18} />} label="Report Queue" count={stats.reported} />
                     <NavItem active={activeTab === 'polls'} onClick={() => setActiveTab('polls')} icon={<BarChart3 size={18} />} label="Poll Governance" />
                     <NavItem active={activeTab === 'categories'} onClick={() => setActiveTab('categories')} icon={<Tags size={18} />} label="Campus Topics" />
+                    <NavItem active={activeTab === 'ads'} onClick={() => setActiveTab('ads')} icon={<Megaphone size={18} />} label="Advertisements" />
                     <NavItem active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={<Lock size={18} />} label="Cyber Security" />
                 </nav>
 
@@ -269,21 +271,21 @@ const AdminDashboard = ({ onClose }) => {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 bg-[#050505] relative">
-                <header className="px-6 sm:px-12 py-6 sm:py-10 border-b border-white/5 flex items-center justify-between bg-slate-950/20 backdrop-blur-md">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-3 bg-white/5 text-white rounded-xl">
-                            <Menu size={20} />
+                <header className="px-4 sm:px-12 py-4 sm:py-10 border-b border-white/5 flex items-center justify-between bg-slate-950/20 backdrop-blur-md sticky top-0 z-40">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2.5 bg-white/5 text-white rounded-xl">
+                            <Menu size={18} />
                         </button>
-                        <h2 className="text-2xl sm:text-4xl font-display font-black text-white capitalize tracking-tighter">{activeTab}</h2>
+                        <h2 className="text-xl sm:text-4xl font-display font-black text-white capitalize tracking-tighter">{activeTab}</h2>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-4">
                         {activeTab === 'categories' && (
-                            <button onClick={() => { setEditingCategory({ id: '', label: '', icon: '', order: 0 }); setIsEditingCategory(true); }} className="p-3 sm:px-6 sm:py-3 bg-primary-gradient text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-glow">
-                                <Plus size={18} /><span className="hidden sm:inline">New Topic</span>
+                            <button onClick={() => { setEditingCategory({ id: '', label: '', icon: '', order: 0 }); setIsEditingCategory(true); }} className="p-2.5 sm:px-6 sm:py-3 bg-primary-gradient text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-glow">
+                                <Plus size={16} /><span className="hidden xs:inline">New Topic</span>
                             </button>
                         )}
                         {activeTab !== 'overview' && activeTab !== 'categories' && activeTab !== 'security' && (
-                            <div className="relative hidden sm:block">
+                            <div className="relative hidden md:block">
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
                                 <input
                                     type="text"
@@ -294,17 +296,17 @@ const AdminDashboard = ({ onClose }) => {
                                 />
                             </div>
                         )}
-                        <button onClick={() => { fetchStats(); fetchData(); }} className="p-3 sm:p-4 bg-slate-900 border border-white/5 rounded-xl sm:rounded-2xl text-text-muted hover:text-white transition-all">
-                            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                        <button onClick={() => { fetchStats(); fetchData(); }} className="p-2.5 sm:p-4 bg-slate-900 border border-white/5 rounded-xl sm:rounded-2xl text-text-muted hover:text-white transition-all">
+                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-6 sm:p-12 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-12 custom-scrollbar">
                     {loading ? <Loader /> : (
                         <>
                             {activeTab === 'overview' && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-8">
                                     <StatCard label="Live Whispers" value={stats.posts} icon={<MessageSquare className="text-primary-blue" />} />
                                     <StatCard label="Campus IDs" value={stats.users} icon={<Users className="text-primary-purple" />} />
                                     <StatCard label="Daily Active" value={stats.activeNow} icon={<Zap className="text-accent-green" />} />
@@ -317,25 +319,25 @@ const AdminDashboard = ({ onClose }) => {
                                 <div className="space-y-4">
                                     {data.length === 0 ? <NoData label="Registry is empty." /> :
                                         data.map(user => (
-                                            <div key={user._id} className={clsx("bg-slate-900/40 border p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] flex flex-col sm:flex-row items-center justify-between gap-4 group", user.isBanned ? "border-accent-red/20 opacity-50" : "border-white/5")}>
-                                                <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
-                                                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl">{user.avatar || '👻'}</div>
-                                                    <div className="truncate">
-                                                        <h4 className="text-lg sm:text-xl font-display font-black text-white truncate">@{user.username}</h4>
-                                                        <p className="text-xs text-text-muted font-mono truncate">{user.email}</p>
+                                            <div key={user._id} className={clsx("bg-slate-900/40 border p-3.5 sm:p-6 rounded-2xl sm:rounded-[2rem] flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 group", user.isBanned ? "border-accent-red/20 opacity-50" : "border-white/5")}>
+                                                <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto">
+                                                    <div className="w-10 h-10 sm:w-16 sm:h-16 bg-slate-800 rounded-xl sm:rounded-3xl flex items-center justify-center text-2xl sm:text-4xl">{user.avatar || '👻'}</div>
+                                                    <div className="truncate flex-1">
+                                                        <h4 className="text-base sm:text-xl font-display font-black text-white truncate">@{user.username}</h4>
+                                                        <p className="text-[10px] sm:text-xs text-text-muted font-mono truncate">{user.email}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-2 sm:mt-0 pt-4 sm:pt-0 border-t border-white/5 sm:border-0">
+                                                <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto mt-1 sm:mt-0 pt-3 sm:pt-0 border-t border-white/5 sm:border-0">
                                                     <div className="text-left sm:text-right">
-                                                        <p className="text-[9px] text-text-muted uppercase font-black">Last Seen</p>
-                                                        <p className="text-[11px] text-text-secondary font-bold">{safeFormatDistance(user.lastActive)}</p>
+                                                        <p className="text-[8px] sm:text-[9px] text-text-muted uppercase font-black">Last Seen</p>
+                                                        <p className="text-[10px] sm:text-[11px] text-text-secondary font-bold">{safeFormatDistance(user.lastActive)}</p>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <button onClick={() => handleToggleBan(user._id, user.isBanned)} className={clsx("p-3 rounded-xl border transition-all", user.isBanned ? "bg-accent-green/10 text-accent-green border-accent-green/20" : "bg-accent-red/10 text-accent-red border-accent-red/20")}>
-                                                            {user.isBanned ? <ShieldCheck size={20} /> : <Ban size={20} />}
+                                                        <button onClick={() => handleToggleBan(user._id, user.isBanned)} className={clsx("p-2.5 sm:p-3 rounded-xl border transition-all", user.isBanned ? "bg-accent-green/10 text-accent-green border-accent-green/20" : "bg-accent-red/10 text-accent-red border-accent-red/20")}>
+                                                            {user.isBanned ? <ShieldCheck size={18} /> : <Ban size={18} />}
                                                         </button>
-                                                        <button onClick={() => handleDeleteUser(user._id)} className="p-3 bg-slate-800 text-text-muted hover:bg-accent-red hover:text-white rounded-xl border border-white/5 transition-all">
-                                                            <Trash2 size={20} />
+                                                        <button onClick={() => handleDeleteUser(user._id)} className="p-2.5 sm:p-3 bg-slate-800 text-text-muted hover:bg-accent-red hover:text-white rounded-xl border border-white/5 transition-all">
+                                                            <Trash2 size={18} />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -349,12 +351,12 @@ const AdminDashboard = ({ onClose }) => {
                                 <div className="space-y-6">
                                     {data.length === 0 ? <NoData label="Clean queue." /> :
                                         data.map(post => (
-                                            <div key={post._id} className="bg-slate-900/60 border border-accent-red/30 p-6 sm:p-10 rounded-2xl sm:rounded-[3rem] space-y-4 sm:space-y-6">
-                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                                    <span className="px-4 py-1.5 bg-accent-red text-white text-[10px] sm:text-xs font-black uppercase rounded-full">Flagged: {post.reports} reports</span>
-                                                    <button onClick={() => handleDeletePost(post._id)} className="w-full sm:w-auto px-6 py-3 bg-white text-black text-[10px] font-black uppercase rounded-xl">Remove Node</button>
+                                            <div key={post._id} className="bg-slate-900/60 border border-accent-red/30 p-5 sm:p-10 rounded-2xl sm:rounded-[3rem] space-y-4 sm:space-y-6">
+                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                                                    <span className="px-3 sm:px-4 py-1.5 bg-accent-red text-white text-[9px] sm:text-xs font-black uppercase rounded-full w-max">Flagged: {post.reports} reports</span>
+                                                    <button onClick={() => handleDeletePost(post._id)} className="px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-black text-[10px] sm:text-xs font-black uppercase rounded-xl sm:rounded-2xl shadow-xl">Remove Node</button>
                                                 </div>
-                                                <p className="text-text-primary text-xl sm:text-2xl font-medium italic border-l-4 sm:border-l-8 border-accent-red/20 pl-6 sm:pl-10 py-1 sm:py-2">"{post.content}"</p>
+                                                <p className="text-text-primary text-base sm:text-2xl font-medium italic border-l-4 sm:border-l-8 border-accent-red/20 pl-4 sm:pl-10 py-1 sm:py-2">"{post.content}"</p>
                                             </div>
                                         ))
                                     }
@@ -365,12 +367,12 @@ const AdminDashboard = ({ onClose }) => {
                                 <div className="space-y-4">
                                     {data.length === 0 ? <NoData label="No polls found." /> :
                                         data.map(poll => (
-                                            <div key={poll._id} className="bg-slate-900/50 border border-white/5 p-6 sm:p-8 rounded-2xl sm:rounded-[2.5rem] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                                <div className="flex-1 w-full">
-                                                    <h4 className="text-xl sm:text-2xl font-bold font-display text-white mb-2 line-clamp-2">{poll.question}</h4>
-                                                    <p className="text-[10px] text-primary-blue font-black uppercase">{poll.voters?.length || 0} Total Votes</p>
+                                            <div key={poll._id} className="bg-slate-900/50 border border-white/5 p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] flex items-center justify-between gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-base sm:text-2xl font-bold font-display text-white mb-1.5 line-clamp-2 leading-tight">{poll.question}</h4>
+                                                    <p className="text-[8px] sm:text-[10px] text-primary-blue font-black uppercase tracking-widest">{poll.voters?.length || 0} Total Votes</p>
                                                 </div>
-                                                <button onClick={() => handleDeletePoll(poll._id)} className="p-3 bg-accent-red/10 text-accent-red rounded-xl self-end sm:self-auto"><Trash2 size={20} /></button>
+                                                <button onClick={() => handleDeletePoll(poll._id)} className="p-2.5 sm:p-4 bg-accent-red/10 text-accent-red rounded-xl hover:bg-accent-red hover:text-white transition-all shrink-0"><Trash2 size={16} /></button>
                                             </div>
                                         ))
                                     }
@@ -436,7 +438,7 @@ const AdminDashboard = ({ onClose }) => {
                                                 onClick={async () => {
                                                     setUpdatingPass(true);
                                                     try {
-                                                        await axios.post('http://127.0.0.1:5000/api/admin/update-password', {
+                                                        await axios.post('/api/admin/update-password', {
                                                             currentPassword: passwordUpdate.current,
                                                             newPassword: passwordUpdate.next
                                                         }, { headers: { Authorization: `Bearer ${adminToken}` } });
@@ -457,6 +459,8 @@ const AdminDashboard = ({ onClose }) => {
                                     </div>
                                 </div>
                             )}
+
+                            {activeTab === 'ads' && <AdManager />}
                         </>
                     )}
                 </div>

@@ -5,6 +5,7 @@ import Post from '../models/Post.js';
 import Poll from '../models/Poll.js';
 import Category from '../models/Category.js';
 import Config from '../models/Config.js';
+import Ad from '../models/Ad.js';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
@@ -172,8 +173,10 @@ router.get('/polls', isAdmin, async (req, res) => {
 // Delete User Permanently
 router.delete('/users/:id', isAdmin, async (req, res) => {
     try {
+        // Cascade delete all posts by this user
+        await Post.deleteMany({ author: req.params.id });
         await User.findByIdAndDelete(req.params.id);
-        res.json({ message: 'User record erased' });
+        res.json({ message: 'User and their whispers erased' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -233,6 +236,45 @@ router.delete('/categories/:id', isAdmin, async (req, res) => {
     try {
         await Category.findByIdAndDelete(req.params.id);
         res.json({ message: 'Category deleted' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Advertisement Management
+router.get('/ads', isAdmin, async (req, res) => {
+    try {
+        const ads = await Ad.find().sort({ createdAt: -1 });
+        res.json(ads);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/ads', isAdmin, async (req, res) => {
+    try {
+        const ad = new Ad(req.body);
+        await ad.save();
+        res.status(201).json(ad);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.patch('/ads/:id', isAdmin, async (req, res) => {
+    try {
+        req.body.updatedAt = new Date();
+        const ad = await Ad.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(ad);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.delete('/ads/:id', isAdmin, async (req, res) => {
+    try {
+        await Ad.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Advertisement deleted' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
