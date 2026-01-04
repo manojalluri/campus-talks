@@ -251,7 +251,9 @@ function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans overflow-hidden">
-        <Toaster position="top-center" />
+        <Toaster position="top-center" toastOptions={{
+          style: { background: '#1e293b', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }
+        }} />
 
         {/* Animated Background */}
         <div className="absolute inset-0">
